@@ -1,0 +1,20 @@
+{
+  "name": "empsys-presentation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "記入シート.yml から成果発表会の資料（pptx）を生成する",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test --experimental-test-coverage --test-coverage-include='*.js' --test-coverage-exclude='test/**' test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "js-yaml": "^5.4.3",
+    "pptxgenjs": "^4.0.1"
+  },
+  "devDependencies": {
+    "jszip": "^3.10.2"
+  }
+}
