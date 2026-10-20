@@ -5,7 +5,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { PLACEHOLDER, display, normalize, parse, demoMinutes } = require("../lib");
+const { PLACEHOLDER, display, fixFullWidthSpace, normalize, parse, demoMinutes } = require("../lib");
 
 const SHEET = path.join(__dirname, "..", "..", "記入シート.yml");
 
@@ -192,7 +192,7 @@ test.describe("normalize：テスト結果・発表担当", () => {
 test.describe("parse", () => {
   test.it("同梱の記入シートは正しく読める", () => {
     const d = parse(fs.readFileSync(SHEET, "utf8"));
-    assert.equal(d.メンバー.length, 4);
+    assert.ok(d.メンバー.length >= 3 && d.メンバー.length <= 4);
     assert.equal(d.苦労したこと.length, 3);
   });
   test.it("YAMLの書き間違いは行番号付きのエラー", () => {
@@ -213,4 +213,30 @@ test.describe("demoMinutes（複数条件網羅）", () => {
       assert.equal(demoMinutes({ 更新: a, ユーザ登録: b }), want);
     });
   }
+});
+
+test.describe("fixFullWidthSpace：全角スペースの救済", () => {
+  test.it("項目名の直後の全角スペースは半角になる", () => {
+    assert.equal(fixFullWidthSpace("チーム名:　F班"), "チーム名: F班");
+  });
+  test.it("字下げした項目・一覧の項目も対象", () => {
+    assert.equal(fixFullWidthSpace("    良かった点:　班員"), "    良かった点: 班員");
+    assert.equal(fixFullWidthSpace("  - 氏名:　山田"), "  - 氏名: 山田");
+  });
+  test.it("全角スペースが複数続いても1つの半角になる", () => {
+    assert.equal(fixFullWidthSpace("a:　　b"), "a: b");
+  });
+  test.it("値の途中の全角スペースは変えない", () => {
+    assert.equal(fixFullWidthSpace("a: b　c"), "a: b　c");
+  });
+  test.it("値の中の「:　」は変えない（最初の : だけが対象）", () => {
+    assert.equal(fixFullWidthSpace("a: 時刻 10:　c"), "a: 時刻 10:　c");
+  });
+  test.it("コメント行は変えない", () => {
+    assert.equal(fixFullWidthSpace("# メモ:　x"), "# メモ:　x");
+  });
+  test.it("全角スペースのある記入シートも読める", () => {
+    const text = fs.readFileSync(SHEET, "utf8").replace("チーム名: F班", "チーム名:　G班");
+    assert.equal(parse(text).チーム名, "G班");
+  });
 });

@@ -62,6 +62,7 @@ test.describe("記入欄の表示", () => {
   });
   test.it("見どころが記入済みなら破線枠を使わない", async () => {
     const d = sheet();
+    d.追加課題.見どころ = "【記入】";
     const before = (await slides(d))[7];
     d.追加課題.見どころ = "現在の値が初期表示される";
     const after = (await slides(d))[7];
@@ -87,9 +88,10 @@ test.describe("発表の流れの担当欄", () => {
   });
   test.it("1人でも未記入なら記入欄のまま", async () => {
     const d = sheet();
-    Object.assign(d.発表担当, { 学んだこと: "山田", 苦労したこと: "鈴木" });
+    Object.assign(d.発表担当, { 学んだこと: "山田", 苦労したこと: "鈴木", 工夫点: "【記入】" });
     const xs = await slides(d);
     assert.ok(!has(xs[1], "山田・鈴木"));
+    assert.ok(italicRun(xs[1], "【記入】"));
   });
 });
 
@@ -97,7 +99,8 @@ test.describe("個人ごとの感想（メンバー数）", () => {
   for (const n of [3, 4]) {
     test.it(`${n}人なら枠も${n}つ`, async () => {
       const d = sheet();
-      d.メンバー = d.メンバー.slice(0, n);
+      // 記入シートの人数によらず、先頭の人を複製して n 人にそろえる
+      d.メンバー = Array.from({ length: n }, (_, i) => d.メンバー[i] || Object.assign({}, d.メンバー[0], { 氏名: `氏名${i + 1}` }));
       const xs = await slides(d);
       const count = (xs[11].match(/name="感想背景\d"/g) || []).length;
       assert.equal(count, n);
@@ -128,7 +131,7 @@ test.describe("main とコマンド実行", () => {
   });
   test.it("コマンド実行：記入シートに誤りがあれば1で終了し理由を表示", () => {
     const bad = path.join(dir, "bad.yml");
-    fs.writeFileSync(bad, fs.readFileSync(SHEET, "utf8").replace("  - 氏名: 【記入】氏名4", "  - 氏名: 【記入】氏名4\n  - 氏名: 5人目"));
+    fs.writeFileSync(bad, fs.readFileSync(SHEET, "utf8").replace("メンバー:\n", "メンバー:\n" + "  - 氏名: 追加\n".repeat(3)));
     assert.throws(() => execFileSync("node", [path.join(__dirname, "..", "build.js"), bad, path.join(dir, "c.pptx")],
       { encoding: "utf8", stdio: "pipe" }), (e) => e.status === 1 && /3〜4件/.test(e.stderr));
   });

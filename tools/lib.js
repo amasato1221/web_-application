@@ -109,11 +109,16 @@ function normalize(raw) {
   return data;
 }
 
+// 「項目名:」の直後の全角スペースを半角スペースに置き換える（よくある入力ミスの救済）
+function fixFullWidthSpace(text) {
+  return text.replace(/^([ ]*(?:- )?[^\s#:][^:\n]*):\u3000+/gm, "$1: ");
+}
+
 // YAML文字列を読み込んで検証する
 function parse(text) {
   let raw;
   try {
-    raw = yaml.load(text);
+    raw = yaml.load(fixFullWidthSpace(text));
   } catch (e) {
     const line = e.mark ? `${e.mark.line + 1}行目付近` : "どこか";
     throw new Error(`記入シートの${line}の書き方が正しくありません。「項目名: 値」の「: 」の後ろに半角スペースがあるか、字下げがずれていないか確認してください。`);
@@ -126,4 +131,4 @@ function demoMinutes(extra) {
   return extra.更新 || extra.ユーザ登録 ? 4 : 2.5;
 }
 
-module.exports = { PLACEHOLDER, LIMITS, display, normalize, parse, demoMinutes };
+module.exports = { PLACEHOLDER, LIMITS, display, fixFullWidthSpace, normalize, parse, demoMinutes };
