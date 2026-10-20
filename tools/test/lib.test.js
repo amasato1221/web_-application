@@ -5,7 +5,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { PLACEHOLDER, display, fixFullWidthSpace, normalize, parse, demoMinutes } = require("../lib");
+const { PLACEHOLDER, display, fixFullWidthSpace, normalize, parse } = require("../lib");
 
 const SHEET = path.join(__dirname, "..", "..", "記入シート.yml");
 
@@ -73,7 +73,6 @@ test.describe("normalize：全体の形", () => {
     assert.equal(d.チーム名, "F班");
     assert.equal(d.メンバー.length, 3);
     assert.deepEqual(d.追加課題, { 更新: true, ユーザ登録: true, 見どころ: undefined });
-    assert.deepEqual(d.発表担当, {});
     assert.deepEqual(d.テスト結果, {});
   });
 });
@@ -175,17 +174,16 @@ test.describe("normalize：追加課題（toImplemented とオブジェクト判
   });
 });
 
-test.describe("normalize：テスト結果・発表担当", () => {
+test.describe("normalize：テスト結果", () => {
   test.it("オブジェクトならそのまま使う", () => {
-    const raw = Object.assign(base(), { テスト結果: { OK: 1 }, 発表担当: { 要望: "A" } });
-    const d = normalize(raw);
-    assert.deepEqual(d.テスト結果, { OK: 1 });
-    assert.deepEqual(d.発表担当, { 要望: "A" });
+    assert.deepEqual(normalize(Object.assign(base(), { テスト結果: { OK: 1 } })).テスト結果, { OK: 1 });
   });
   test.it("オブジェクトでなければ空として扱う", () => {
-    const d = normalize(Object.assign(base(), { テスト結果: 5, 発表担当: "A" }));
-    assert.deepEqual(d.テスト結果, {});
-    assert.deepEqual(d.発表担当, {});
+    assert.deepEqual(normalize(Object.assign(base(), { テスト結果: 5 })).テスト結果, {});
+  });
+  test.it("以前の「発表担当」の項目が残っていても無視する", () => {
+    const d = normalize(Object.assign(base(), { 発表担当: { 要望: "A" } }));
+    assert.equal(d.発表担当, undefined);
   });
 });
 
@@ -204,15 +202,6 @@ test.describe("parse", () => {
   test.it("中身が一覧だけのファイルは形のエラー", () => {
     assert.throws(() => parse("- a\n- b"), /見本の形を崩さない/);
   });
-});
-
-test.describe("demoMinutes（複数条件網羅）", () => {
-  const cases = [[true, true, 4], [true, false, 4], [false, true, 4], [false, false, 2.5]];
-  for (const [a, b, want] of cases) {
-    test.it(`更新=${a}, ユーザ登録=${b} → ${want}分`, () => {
-      assert.equal(demoMinutes({ 更新: a, ユーザ登録: b }), want);
-    });
-  }
 });
 
 test.describe("fixFullWidthSpace：全角スペースの救済", () => {

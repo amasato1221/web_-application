@@ -5,7 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const pptxgen = require("pptxgenjs");
-const { parse, display, demoMinutes } = require("./lib");
+const { parse, display } = require("./lib");
 
 const ROOT = path.resolve(__dirname, "..");
 const DEFAULT_INPUT = path.join(ROOT, "記入シート.yml");
@@ -67,13 +67,6 @@ function build(data) {
     slide.addText(text, { x: 0.5, y: 0.9, w: 9.0, h: 0.35, fontSize: 13, color: COL.gray,
       margin: 0, isTextBox: true, objectName: "サブタイトル" });
   }
-  function tag(slide, label, value) {
-    const r = run(value, { color: COL.orange });
-    slide.addText([{ text: label, options: { color: COL.orange } }, { text: r.text, options: r.options }], {
-      shape: pres.ShapeType.roundRect, rectRadius: 0.08, x: 7.4, y: 0.38, w: 2.1, h: 0.42, fontSize: 11, bold: true,
-      fill: { color: COL.tagBg }, line: { color: COL.orange, width: 1 }, align: "center", valign: "middle",
-      isTextBox: true, objectName: "担当タグ" });
-  }
   function badge(slide, x, y, label, color, size = 0.42) {
     slide.addText(String(label), { shape: pres.ShapeType.ellipse, x, y, w: size, h: size, fill: { color },
       color: COL.white, fontSize: 13, bold: true, align: "center", valign: "middle", margin: 0, isTextBox: true,
@@ -98,7 +91,6 @@ function build(data) {
   }
 
   const members = data.メンバー;
-  const owner = data.発表担当;
   const extra = data.追加課題;
   const hasExtra = extra.更新 || extra.ユーザ登録;
   const memberNames = members.map((m, i) => run(m.氏名, {}, `【記入】氏名${i + 1}`));
@@ -127,47 +119,10 @@ function build(data) {
     x: 0.6, y: 4.8, w: 8.8, h: 0.3, fontSize: 10, color: "9FC3C9", margin: 0, isTextBox: true, objectName: "注意" });
   s.addNotes("【担当：リーダー／目安 0.5分】\nチーム名とメンバーを紹介する。全員がホワイトボード前に並び、一人ずつ名乗る。");
 
-  // ===== 2. 発表の流れ =====
-  pres.addSection({ title: "導入" });
-  s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "導入" });
-  s.addText("発表の流れ", { placeholder: "title" });
-  sub(s, "1チーム 8〜12分。全員がホワイトボード前に出て発表します");
-  const demoMin = demoMinutes(extra);
-  const flow = [
-    ["システム概要", 1.5, owner.システム概要, "※最初のチームのみ発表"],
-    ["デモンストレーション", demoMin, owner.デモ操作, hasExtra ? "基本ルート＋追加課題" : "基本ルート"],
-    ["学んだこと／苦労したこと／工夫点", 3, [owner.学んだこと, owner.苦労したこと, owner.工夫点], ""],
-    ["個人ごとの感想", 2, "全員", "1人30秒程度"],
-    ["今後の授業への要望", 1, owner.要望, ""],
-  ];
-  const head = (t, align) => ({ text: t, options: { bold: true, color: COL.white, fill: { color: COL.navy }, align } });
-  const rows = [[head("No", "center"), head("内容"), head("目安", "center"), head("担当"), head("備考")]];
-  flow.forEach((f, i) => {
-    let who;
-    if (Array.isArray(f[2])) {
-      const names = [...new Set(f[2].map((v) => display(v).text))];
-      const allFilled = f[2].every((v) => !display(v).fill);
-      who = allFilled ? { text: names.join("・") } : run(undefined);
-    } else {
-      who = run(f[2]);
-    }
-    rows.push([{ text: String(i + 1), options: { align: "center" } }, { text: f[0] },
-      { text: f[1] + "分", options: { align: "center" } }, who, { text: f[3], options: { color: COL.gray } }]);
-  });
-  const total = flow.reduce((a, f) => a + f[1], 0);
-  rows.push([{ text: "" }, { text: "合計", options: { bold: true } },
-    { text: `約${total}分`, options: { bold: true, align: "center" } }, { text: "" },
-    { text: `概要なしは約${total - 1.5}分`, options: { color: COL.gray } }]);
-  s.addTable(rows, { x: 0.5, y: 1.4, w: 9.0, colW: [0.6, 3.4, 1.1, 1.6, 2.3], fontSize: 13, color: COL.text,
-    border: { type: "solid", pt: 0.75, color: COL.line }, rowH: 0.42, valign: "middle", objectName: "時間配分表" });
-  s.addNotes("【担当：司会／目安 0.5分】\n時間配分は目安。リハーサルで計測し、8〜12分に収まるよう調整すること。\n" +
-    "2チーム目以降は「システム概要は省略します」と伝えて次へ進む。");
-
   // ===== 3. システム概要 =====
   pres.addSection({ title: "システム概要" });
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "システム概要" });
   s.addText("システム概要", { placeholder: "title" });
-  tag(s, "担当：", owner.システム概要);
   sub(s, "総務部の社員が、従業員情報をWebブラウザから閲覧・登録・削除するシステム");
   const nodes = [["利用者", "総務部の社員"], ["Webブラウザ", "画面操作"], ["Webサーバ", "Tomcat\nServlet / JSP"],
     ["DBサーバ", "MySQL\nemp_sys_db"]];
@@ -197,7 +152,6 @@ function build(data) {
   // ===== 4. 機能一覧 =====
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "システム概要" });
   s.addText("機能一覧と画面遷移", { placeholder: "title" });
-  tag(s, "担当：", owner.システム概要);
   sub(s, hasExtra ? "必須機能5つ＋追加課題。ログイン後はメニュー画面から各機能へ遷移します"
     : "必須機能5つ。ログイン後はメニュー画面から各機能へ遷移します");
   const funcs = [
@@ -227,7 +181,6 @@ function build(data) {
   // ===== 5. 開発環境 =====
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "システム概要" });
   s.addText("開発環境とプログラム構成", { placeholder: "title" });
-  tag(s, "担当：", owner.システム概要);
   sub(s, "Servlet（受付）→ Logic（処理）→ DAO（DB操作）の3層に分けて実装");
   const envRows = data.開発環境.map((e) => [
     Object.assign(run(e.項目), { options: Object.assign({ bold: true, color: COL.navy, fill: { color: COL.pale } }, run(e.項目).options) }),
@@ -256,7 +209,6 @@ function build(data) {
   // ===== 6. 開発の進め方 =====
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "システム概要" });
   s.addText("開発の進め方（全30コマ）", { placeholder: "title" });
-  tag(s, "担当：", owner.システム概要);
   sub(s, "要求分析から成果発表まで、WBSで進捗を管理しながら進めました");
   const phases = [["準備", "1〜2"], ["要求分析", "3〜5"], ["設計", "6〜10"], ["実装", "11〜20"],
     ["テスト", "21〜25"], ["納品", "26"], ["発表", "27〜30"]];
@@ -289,7 +241,6 @@ function build(data) {
   pres.addSection({ title: "デモンストレーション" });
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "デモンストレーション" });
   s.addText("デモンストレーション：基本ルート", { placeholder: "title" });
-  tag(s, "操作：", owner.デモ操作);
   sub(s, "Web画面を表示して、ログインからログアウトまでを順に操作します");
   const demo = [
     ["ログイン", "誤ったID／パスワード → エラー画面、正しい値 → メニュー画面（「ようこそ、○○さん」）"],
@@ -321,8 +272,7 @@ function build(data) {
   if (hasExtra) {
     s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "デモンストレーション" });
     s.addText("デモンストレーション：追加課題", { placeholder: "title" });
-    tag(s, "操作：", owner.デモ操作);
-    sub(s, "要件定義書の「余力があれば」「追加システム要件」から実装した機能");
+      sub(s, "要件定義書の「余力があれば」「追加システム要件」から実装した機能");
     const cards = [];
     if (extra.更新) cards.push(["従業員情報更新", ["一覧で従業員を選択 →［従業員更新］", "更新画面に選択した従業員の情報が初期表示される",
       "従業員コードは変更不可", "更新ボタン → 更新完了画面 → 一覧で変更を確認"]]);
@@ -344,7 +294,6 @@ function build(data) {
   pres.addSection({ title: "振り返り" });
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "振り返り" });
   s.addText("学んだこと", { placeholder: "title" });
-  tag(s, "担当：", owner.学んだこと);
   sub(s, "要求分析からテスト・納品まで、ひと通りの開発工程を経験して学んだこと");
   const ln = data.学んだこと.length;
   const lw = (9.0 - 0.21 * (ln - 1)) / ln;
@@ -362,7 +311,6 @@ function build(data) {
   // ===== 10. 苦労したこと =====
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "振り返り" });
   s.addText("苦労したこと・難しかったこと", { placeholder: "title" });
-  tag(s, "担当：", owner.苦労したこと);
   sub(s, "「何が起きたか → どう解決したか」の形でまとめました");
   s.addText("何が起きたか", { x: 2.9, y: 1.4, w: 3.2, h: 0.3, fontSize: 12, bold: true, color: COL.gray,
     margin: 0, isTextBox: true, objectName: "列見出し_問題" });
@@ -386,7 +334,6 @@ function build(data) {
   // ===== 11. 工夫点 =====
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "振り返り" });
   s.addText("工夫点（アピールしたい点）", { placeholder: "title" });
-  tag(s, "担当：", owner.工夫点);
   sub(s, "左はテスト結果から言える数字、右はチームで特に見てほしい点");
   const t = data.テスト結果;
   const stats = [[t.テスト項目数, "テスト項目"], [t.OK, "OK"], [t.NG, "NG"]];
@@ -414,9 +361,6 @@ function build(data) {
   // ===== 12. 個人ごとの感想 =====
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "振り返り" });
   s.addText("個人ごとの感想", { placeholder: "title" });
-  s.addText("全員／1人30秒", { shape: pres.ShapeType.roundRect, rectRadius: 0.08, x: 7.4, y: 0.38, w: 2.1, h: 0.42,
-    fontSize: 11, bold: true, color: COL.orange, fill: { color: COL.tagBg }, line: { color: COL.orange, width: 1 },
-    align: "center", valign: "middle", isTextBox: true, objectName: "担当タグ" });
   sub(s, "担当した作業と、良かった点・反省点・次に活かしたいこと");
   const four = members.length === 4;
   members.forEach((m, i) => {
@@ -447,7 +391,6 @@ function build(data) {
   pres.addSection({ title: "要望・まとめ" });
   s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "要望・まとめ" });
   s.addText("今後の授業への要望", { placeholder: "title" });
-  tag(s, "担当：", owner.要望);
   sub(s, "企業課題Iに向けて、そして来年の3年生の授業に向けて");
   [["企業課題Iに向けた要望", data.企業課題Iへの要望], ["来年の3年生授業への改善点", data.来年の授業への改善点]].forEach((col, i) => {
     const x = 0.5 + i * 4.6;

@@ -30,7 +30,7 @@ const has = (xml, text) => xml.includes(text);
 const italicRun = (xml, text) => new RegExp(`<a:rPr[^>]*\\bi="1"[^>]*>(?:(?!</a:r>).)*<a:t>${text}</a:t>`, "s").test(xml);
 
 test.describe("スライド枚数（追加課題の複数条件網羅）", () => {
-  for (const [a, b, n] of [[true, true, 14], [true, false, 14], [false, true, 14], [false, false, 13]]) {
+  for (const [a, b, n] of [[true, true, 13], [true, false, 13], [false, true, 13], [false, false, 12]]) {
     test.it(`更新=${a}, ユーザ登録=${b} → ${n}枚`, async () => {
       const d = sheet();
       d.追加課題.更新 = a;
@@ -41,9 +41,6 @@ test.describe("スライド枚数（追加課題の複数条件網羅）", () =>
       assert.equal(has(all, "従業員情報更新"), a);
       assert.equal(has(all, "ユーザ情報登録"), b);
       // 合計：追加課題あり 11.5分（概要を省くと10分）、なし 10分（省くと8.5分）
-      assert.equal(has(xs[1], "約11.5分"), a || b);
-      assert.equal(has(xs[1], "約8.5分"), !(a || b));
-      assert.equal(has(xs[1], "基本ルート＋追加課題"), a || b);
     });
   }
 });
@@ -63,9 +60,9 @@ test.describe("記入欄の表示", () => {
   test.it("見どころが記入済みなら破線枠を使わない", async () => {
     const d = sheet();
     d.追加課題.見どころ = "【記入】";
-    const before = (await slides(d))[7];
+    const before = (await slides(d))[6];
     d.追加課題.見どころ = "現在の値が初期表示される";
-    const after = (await slides(d))[7];
+    const after = (await slides(d))[6];
     assert.ok(has(before, 'prstDash val="dash"'));
     assert.ok(!has(after, 'prstDash val="dash"'));
     assert.ok(!italicRun(after, "現在の値が初期表示される"));
@@ -74,24 +71,20 @@ test.describe("記入欄の表示", () => {
     const d = sheet();
     d.追加課題.ユーザ登録 = false;
     const xs = await slides(d);
-    assert.ok(has(xs[7], "① 従業員情報更新"));
-    assert.ok(!has(xs[7], "②"));
+    assert.ok(has(xs[6], "① 従業員情報更新"));
+    assert.ok(!has(xs[6], "②"));
   });
 });
 
-test.describe("発表の流れの担当欄", () => {
-  test.it("振り返りの担当が全員記入済みなら名前を重複なく並べる", async () => {
-    const d = sheet();
-    Object.assign(d.発表担当, { 学んだこと: "山田", 苦労したこと: "鈴木", 工夫点: "山田" });
-    const xs = await slides(d);
-    assert.ok(has(xs[1], "山田・鈴木"));
-  });
-  test.it("1人でも未記入なら記入欄のまま", async () => {
-    const d = sheet();
-    Object.assign(d.発表担当, { 学んだこと: "山田", 苦労したこと: "鈴木", 工夫点: "【記入】" });
-    const xs = await slides(d);
-    assert.ok(!has(xs[1], "山田・鈴木"));
-    assert.ok(italicRun(xs[1], "【記入】"));
+test.describe("担当表示の削除", () => {
+  test.it("発表の流れのスライドと右上のタグはどのスライドにもない", async () => {
+    const xs = await slides(sheet());
+    for (const x of xs) {
+      assert.ok(!has(x, 'name="担当タグ"'));
+      assert.ok(!has(x, "発表の流れ"));
+      assert.ok(!has(x, "全員／1人30秒"));
+    }
+    assert.ok(has(xs[1], "システム概要"), "2枚目はシステム概要");
   });
 });
 
@@ -102,7 +95,7 @@ test.describe("個人ごとの感想（メンバー数）", () => {
       // 記入シートの人数によらず、先頭の人を複製して n 人にそろえる
       d.メンバー = Array.from({ length: n }, (_, i) => d.メンバー[i] || Object.assign({}, d.メンバー[0], { 氏名: `氏名${i + 1}` }));
       const xs = await slides(d);
-      const count = (xs[11].match(/name="感想背景\d"/g) || []).length;
+      const count = (xs[10].match(/name="感想背景\d"/g) || []).length;
       assert.equal(count, n);
     });
   }
@@ -113,7 +106,7 @@ test.describe("工夫点の数値", () => {
     const d = sheet();
     d.テスト結果 = {};
     const xs = await slides(d);
-    assert.ok(italicRun(xs[10], "—"));
+    assert.ok(italicRun(xs[9], "—"));
   });
 });
 

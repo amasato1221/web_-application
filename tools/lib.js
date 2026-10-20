@@ -80,13 +80,11 @@ function normalize(raw) {
   const upd = extra.従業員情報更新 && typeof extra.従業員情報更新 === "object" ? extra.従業員情報更新 : {};
   const usr = extra.ユーザ情報登録 && typeof extra.ユーザ情報登録 === "object" ? extra.ユーザ情報登録 : {};
   const test = raw.テスト結果 && typeof raw.テスト結果 === "object" ? raw.テスト結果 : {};
-  const owner = raw.発表担当 && typeof raw.発表担当 === "object" ? raw.発表担当 : {};
 
   const data = {
     チーム名: raw.チーム名,
     発表日: raw.発表日,
     メンバー: lists.メンバー,
-    発表担当: owner,
     ログインID: raw.デモのログインID,
     開発環境: lists.開発環境,
     追加課題: {
@@ -126,9 +124,4 @@ function parse(text) {
   return normalize(raw);
 }
 
-// 追加課題の実装状況から、デモの時間（分）を返す
-function demoMinutes(extra) {
-  return extra.更新 || extra.ユーザ登録 ? 4 : 2.5;
-}
-
-module.exports = { PLACEHOLDER, LIMITS, display, fixFullWidthSpace, normalize, parse, demoMinutes };
+module.exports = { PLACEHOLDER, LIMITS, display, fixFullWidthSpace, normalize, parse };
